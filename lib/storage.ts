@@ -1,0 +1,25 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const KEYS = {
+  USER: "@rivo_user",
+  TRANSACTIONS: "@rivo_transactions",
+  CARD: "@rivo_card",
+  BENEFICIARIES: "@rivo_beneficiaries",
+  NOTIFICATIONS: "@rivo_notifications",
+  SEEDED: "@rivo_seeded",
+};
+
+export async function getItem<T>(key: string): Promise<T | null> {
+  const data = await AsyncStorage.getItem(key);
+  return data ? JSON.parse(data) : null;
+}
+
+export async function setItem<T>(key: string, value: T): Promise<void> {
+  await AsyncStorage.setItem(key, JSON.stringify(value));
+}
+
+export async function removeItem(key: string): Promise<void> {
+  await AsyncStorage.removeItem(key);
+}
+
+export { KEYS };
