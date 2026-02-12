@@ -1,0 +1,250 @@
+Create a mobile-first banking app called "Rivo" - a modern neobank like Slice with the following complete features:
+
+TECH STACK:
+- Frontend: React with Vite + Tailwind CSS + Framer Motion for animations
+- Backend: Node.js + Express.js
+- Database: PostgreSQL with proper schema
+- Authentication: JWT + bcrypt for password hashing
+- Mobile-responsive design (mobile-first approach)
+
+CORE FEATURES TO IMPLEMENT:
+
+1. USER AUTHENTICATION & ONBOARDING:
+- Splash screen with Rivo logo animation (fade in + scale)
+- Login page with email/password
+- Signup page with full name, email, password, phone number
+- Animated form validation with shake effect on errors
+- Smooth page transitions using Framer Motion
+- JWT token storage in localStorage
+- Protected routes for authenticated users
+
+2. HOME DASHBOARD:
+- Animated card component showing virtual debit card with:
+  * Card number (masked: **** **** **** 1234)
+  * Cardholder name
+  * Expiry date
+  * CVV (tap to reveal with flip animation)
+  * Card color gradient (purple to blue)
+  * 3D tilt effect on hover/touch
+- Available balance with count-up animation on load
+- Quick action buttons with ripple effect: Send Money, Request Money, Add Money, Pay Bills
+- Recent transactions list (last 5) with slide-in animation
+- Floating action button for new transaction
+
+3. VIRTUAL CARD MANAGEMENT:
+- View card details page with flip animation
+- Freeze/Unfreeze card toggle with smooth transition
+- Set spending limits with animated slider
+- Transaction controls (online, ATM, contactless) with toggle switches
+- Replace card option
+- Card PIN management
+
+4. TRANSACTIONS PAGE:
+- Categorized transaction list with filter chips (All, Sent, Received, Bills)
+- Each transaction card with:
+  * Icon based on category (food, shopping, entertainment, bills, transfer)
+  * Merchant/recipient name
+  * Date and time
+  * Amount with color coding (red for debit, green for credit)
+  * Slide-left to delete animation
+- Search bar with debounced search
+- Infinite scroll or pagination
+- Date range filter
+- Export transactions as CSV
+
+5. MONEY TRANSFER:
+- Send money form with:
+  * Beneficiary search/selection
+  * Amount input with animated keypad
+  * Add note field
+  * Biometric authentication simulation
+  * Success animation (checkmark with confetti effect)
+- Request money feature
+- Split bill calculator
+- Recent beneficiaries list with avatar icons
+
+6. REWARDS & CASHBACK:
+- Rewards points display with progress ring animation
+- Cashback history with card grid layout
+- Redeem rewards options
+- Referral program section
+- Achievement badges with unlock animations
+
+7. ANALYTICS & INSIGHTS:
+- Monthly spending chart (bar chart or donut chart using recharts)
+- Category-wise spending breakdown with animated pie chart
+- Spending trends with line graph
+- Budget tracker with progress bars
+- Animated stats cards (total spent, saved, cashback earned)
+- Month selector with swipe gesture
+
+8. BILLS & PAYMENTS:
+- Bill reminder list with countdown timers
+- Quick pay options for utilities (electricity, water, internet, mobile)
+- Saved billers list
+- Auto-pay toggle
+- Payment history
+
+9. PROFILE & SETTINGS:
+- User profile with avatar upload
+- Personal details edit form
+- Change password
+- Notification preferences with toggle switches
+- Linked bank accounts
+- Security settings (biometric, PIN)
+- Language selector
+- Theme toggle (light/dark mode) with smooth transition
+- Logout with confirmation modal
+
+10. NOTIFICATIONS:
+- Bell icon with badge count animation
+- Notification list with:
+  * Transaction alerts
+  * Bill reminders
+  * Promotional offers
+  * Security alerts
+- Mark as read functionality
+- Slide to dismiss animation
+
+ANIMATIONS TO IMPLEMENT (using Framer Motion):
+
+1. Page Transitions:
+- Slide in from right for forward navigation
+- Slide out to left for back navigation
+- Fade transitions for modals
+
+2. Card Animations:
+- 3D flip animation for card front/back
+- Subtle floating animation on idle
+- Scale up on tap/click
+- Shimmer effect while loading
+
+3. List Animations:
+- Stagger children animation for transaction lists
+- Slide in from bottom for new items
+- Fade out and collapse on delete
+
+4. Button Animations:
+- Ripple effect on tap
+- Scale feedback on press
+- Loading spinner inside button
+- Success checkmark animation
+
+5. Form Animations:
+- Shake effect on validation errors
+- Smooth label float on input focus
+- Progress bar animation during form submission
+
+6. Number Animations:
+- Count up animation for balance
+- Odometer effect for amounts
+- Pulse animation for updates
+
+7. Micro-interactions:
+- Toggle switch smooth transition
+- Checkbox checkmark draw animation
+- Radio button ripple selection
+- Skeleton loading for data fetch
+
+8. Success/Error States:
+- Confetti animation on successful transaction
+- Error shake with red flash
+- Success green pulse effect
+
+DATABASE SCHEMA:
+
+Users table: id, full_name, email, password_hash, phone, created_at, updated_at
+Cards table: id, user_id, card_number, card_holder, expiry_date, cvv, is_frozen, spending_limit, created_at
+Transactions table: id, user_id, card_id, type (debit/credit), amount, category, merchant, description, date, status
+Rewards table: id, user_id, points, cashback_amount, source, date
+Beneficiaries table: id, user_id, name, account_number, bank_name, avatar
+Notifications table: id, user_id, title, message, type, is_read, created_at
+
+API ENDPOINTS TO CREATE:
+
+AUTH:
+POST /api/auth/signup - Create new user
+POST /api/auth/login - Login user
+POST /api/auth/logout - Logout user
+GET /api/auth/me - Get current user
+
+CARDS:
+GET /api/cards - Get user's cards
+POST /api/cards - Create new virtual card
+PUT /api/cards/:id/freeze - Freeze/unfreeze card
+PUT /api/cards/:id/limit - Update spending limit
+
+TRANSACTIONS:
+GET /api/transactions - Get all transactions (with filters)
+POST /api/transactions - Create new transaction
+GET /api/transactions/:id - Get single transaction
+DELETE /api/transactions/:id - Delete transaction
+GET /api/transactions/stats - Get spending analytics
+
+TRANSFERS:
+POST /api/transfers/send - Send money
+POST /api/transfers/request - Request money
+
+REWARDS:
+GET /api/rewards - Get user rewards
+POST /api/rewards/redeem - Redeem points
+
+BENEFICIARIES:
+GET /api/beneficiaries - Get saved beneficiaries
+POST /api/beneficiaries - Add beneficiary
+
+NOTIFICATIONS:
+GET /api/notifications - Get all notifications
+PUT /api/notifications/:id/read - Mark as read
+
+DESIGN SPECIFICATIONS:
+
+Color Palette:
+- Primary: #6366f1 (Indigo)
+- Secondary: #8b5cf6 (Purple)
+- Success: #10b981 (Green)
+- Error: #ef4444 (Red)
+- Warning: #f59e0b (Amber)
+- Background: #f9fafb (Light gray)
+- Card Background: Linear gradient from #6366f1 to #8b5cf6
+- Text: #1f2937 (Dark gray)
+
+Typography:
+- Font Family: Inter or Poppins
+- Headings: Bold, sizes from 24px to 32px
+- Body: Regular, 14px to 16px
+- Small text: 12px
+
+Layout:
+- Mobile breakpoint: 640px
+- Bottom navigation bar with 5 tabs: Home, Cards, Transfer, Rewards, Profile
+- Sticky header with Rivo logo and notification bell
+- Consistent padding: 16px
+- Border radius: 12px for cards, 8px for buttons
+
+Components to Build:
+- Reusable Card component with shadow
+- Button component (primary, secondary, outline variants)
+- Input field with floating label
+- Modal/Bottom sheet component
+- Toast notification component
+- Loading skeleton screens
+- Empty state illustrations
+- Error boundary
+
+ADDITIONAL REQUIREMENTS:
+- Add sample seed data for demonstration (5 users, 20 transactions per user)
+- Implement proper error handling with try-catch
+- Add input validation on both frontend and backend
+- Use environment variables for sensitive data
+- Add loading states for all async operations
+- Implement debouncing for search inputs
+- Add proper TypeScript types if possible
+- Make all animations performant (use transform and opacity)
+- Implement optimistic UI updates
+- Add accessibility features (ARIA labels, keyboard navigation)
+- Mobile gestures: swipe to go back, pull to refresh
+- Offline state indication
+- Form auto-save to localStorage
+
+Create a fully functional prototype with smooth, delightful animations that make the app feel premium and modern like Slice, Jupiter, or Fi Money. The app should work seamlessly on mobile browsers and feel like a native app experience.
