@@ -8,6 +8,7 @@ import {
   ensureDemoUser,
   updateUserBalance
 } from "@/services/database";
+import { KEYS, getItem } from "@/lib/storage";
 
 interface AuthContextValue {
   user: User | null;
@@ -33,10 +34,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loadUser() {
     try {
       // Ensure demo user exists (won't reset if already exists)
-      await ensureDemoUser();
+      const demoUser = await ensureDemoUser();
 
-      // Load current logged-in user
-      const currentUser = await getCurrentUser();
+      // Check if there's a current user in database
+      let currentUser = await getCurrentUser();
+
+      // If no current user in database, check if user was logged in with old system
+      if (!currentUser) {
+        // Try to get user from old storage system
+        const loggedIn = await getItem<boolean>("@rivo_logged_in");
+
+        if (loggedIn) {
+          // Migrate old user session to database format
+          // For simplicity, we'll connect them to the demo user or fetch by email if available
+          const oldUser = await getItem<any>(KEYS.USER);
+
+          if (oldUser && oldUser.email) {
+            const dbUser = await getUserByEmail(oldUser.email);
+            if (dbUser) {
+              await setCurrentUser(dbUser);
+              currentUser = dbUser;
+            } else {
+              // If old user doesn't exist in DB, fallback to demo user
+              await setCurrentUser(demoUser);
+              currentUser = demoUser;
+            }
+          } else {
+            // No user data found, fallback to demo user
+            await setCurrentUser(demoUser);
+            currentUser = demoUser;
+          }
+        }
+      }
+
       if (currentUser) {
         setUser(currentUser);
       }
