@@ -178,6 +178,58 @@ export default function HomeScreen() {
           ))}
         </Animated.View>
 
+        {/* Borrow Money Widget */}
+        <Animated.View entering={FadeInDown.duration(500).delay(350)}>
+          <Pressable
+            onPress={() => { Haptics.impactAsync(); router.push("/borrow"); }}
+            style={({ pressed }) => [styles.borrowCard, pressed && { opacity: 0.9 }]}
+          >
+            <LinearGradient
+              colors={["#10b981", "#059669"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.borrowGradient}
+            >
+              <View style={styles.borrowLeft}>
+                <View style={styles.borrowIcon}>
+                  <Ionicons name="cash" size={28} color="#fff" />
+                </View>
+                <View>
+                  <Text style={styles.borrowTitle}>Need Quick Cash?</Text>
+                  <Text style={styles.borrowSubtitle}>Get instant loans up to ₹50,000</Text>
+                </View>
+              </View>
+              <Ionicons name="arrow-forward-circle" size={32} color="rgba(255,255,255,0.9)" />
+            </LinearGradient>
+          </Pressable>
+        </Animated.View>
+
+        {/* Scan & Pay Widget */}
+        <Animated.View entering={FadeInDown.duration(500).delay(375)}>
+          <Pressable
+            onPress={() => { Haptics.impactAsync(); router.push("/scan-pay"); }}
+            style={({ pressed }) => [styles.scanCard, pressed && { opacity: 0.9 }]}
+          >
+            <LinearGradient
+              colors={["#6366f1", "#4f46e5"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.scanGradient}
+            >
+              <View style={styles.scanLeft}>
+                <View style={styles.scanIcon}>
+                  <Ionicons name="scan" size={28} color="#fff" />
+                </View>
+                <View>
+                  <Text style={styles.scanTitle}>Scan & Pay</Text>
+                  <Text style={styles.scanSubtitle}>Pay merchants instantly with QR</Text>
+                </View>
+              </View>
+              <Ionicons name="qr-code" size={32} color="rgba(255,255,255,0.9)" />
+            </LinearGradient>
+          </Pressable>
+        </Animated.View>
+
         <Animated.View entering={FadeInDown.duration(500).delay(400)}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Transactions</Text>
@@ -368,4 +420,78 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted },
+  borrowCard: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  borrowGradient: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+  },
+  borrowLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    flex: 1,
+  },
+  borrowIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  borrowTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 16,
+    color: "#fff",
+    marginBottom: 4,
+  },
+  borrowSubtitle: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.9)",
+  },
+  scanCard: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  scanGradient: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+  },
+  scanLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    flex: 1,
+  },
+  scanIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  scanTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 16,
+    color: "#fff",
+    marginBottom: 4,
+  },
+  scanSubtitle: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.9)",
+  },
 });

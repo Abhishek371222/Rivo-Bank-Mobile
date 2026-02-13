@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from "react";
-import { Transaction, Card, Beneficiary, AppNotification } from "@/lib/types";
+import { Card, Beneficiary, AppNotification } from "@/lib/types";
+import { Transaction, getUserTransactions, saveTransaction } from "@/services/database";
 import { KEYS, getItem, setItem } from "@/lib/storage";
 import { generateId } from "@/lib/seed-data";
 import { useAuth } from "./AuthContext";
@@ -15,7 +16,7 @@ interface DataContextValue {
   toggleCardFreeze: () => Promise<void>;
   updateSpendingLimit: (limit: number) => Promise<void>;
   toggleCardControl: (control: "onlineEnabled" | "atmEnabled" | "contactlessEnabled") => Promise<void>;
-  addTransaction: (txn: Omit<Transaction, "id" | "userId" | "date" | "status">) => Promise<void>;
+  addTransaction: (txn: Omit<Transaction, "id" | "userId" | "date" | "balance">) => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
   sendMoney: (beneficiaryId: string, amount: number, note: string) => Promise<boolean>;
 }
@@ -23,7 +24,7 @@ interface DataContextValue {
 const DataContext = createContext<DataContextValue | null>(null);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, refreshUser } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [card, setCard] = useState<Card | null>(null);
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
@@ -32,13 +33,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const loadData = useCallback(async () => {
     try {
-      const [txns, c, bens, notifs] = await Promise.all([
-        getItem<Transaction[]>(KEYS.TRANSACTIONS),
+      if (!user) return;
+
+      // Load transactions from database service
+      const txns = await getUserTransactions(user.id);
+
+      // Load other data from old storage
+      const [c, bens, notifs] = await Promise.all([
         getItem<Card>(KEYS.CARD),
         getItem<Beneficiary[]>(KEYS.BENEFICIARIES),
         getItem<AppNotification[]>(KEYS.NOTIFICATIONS),
       ]);
-      setTransactions(txns || []);
+
+      setTransactions(txns);
       setCard(c);
       setBeneficiaries(bens || []);
       setNotifications(notifs || []);
@@ -47,7 +54,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (user) loadData();
@@ -55,8 +62,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const refreshData = useCallback(async () => {
     setIsLoading(true);
+    await refreshUser(); // Refresh user data from database
     await loadData();
-  }, [loadData]);
+  }, [loadData, refreshUser]);
 
   const toggleCardFreeze = useCallback(async () => {
     if (!card) return;
@@ -79,18 +87,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setCard(updated);
   }, [card]);
 
-  const addTransaction = useCallback(async (txn: Omit<Transaction, "id" | "userId" | "date" | "status">) => {
+  const addTransaction = useCallback(async (txn: Omit<Transaction, "id" | "userId" | "date" | "balance">) => {
+    if (!user) return;
+
     const newTxn: Transaction = {
       ...txn,
-      id: generateId(),
-      userId: user?.id || "",
+      id: `txn-${Date.now()}`,
+      userId: user.id,
       date: new Date().toISOString(),
-      status: "completed",
+      balance: user.balance, // Current balance after transaction
     };
-    const updated = [newTxn, ...transactions];
-    await setItem(KEYS.TRANSACTIONS, updated);
-    setTransactions(updated);
-  }, [transactions, user]);
+
+    // Save to database service
+    await saveTransaction(newTxn);
+
+    // Reload transactions
+    const txns = await getUserTransactions(user.id);
+    setTransactions(txns);
+
+    // Refresh user to get updated balance
+    await refreshUser();
+  }, [user, refreshUser]);
 
   const markNotificationRead = useCallback(async (id: string) => {
     const updated = notifications.map((n) =>
@@ -101,21 +118,40 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [notifications]);
 
   const sendMoney = useCallback(async (beneficiaryId: string, amount: number, note: string): Promise<boolean> => {
-    if (!user || !card || user.balance < amount) return false;
-    const ben = beneficiaries.find((b) => b.id === beneficiaryId);
-    if (!ben) return false;
+    if (!user) return false;
+    if (amount > user.balance) return false;
 
-    await addTransaction({
-      type: "debit",
-      amount,
-      category: "transfer",
-      merchant: ben.name,
-      description: note || `Transfer to ${ben.name}`,
-    });
+    const beneficiary = beneficiaries.find((b) => b.id === beneficiaryId);
+    if (!beneficiary) return false;
 
-    await updateUser({ balance: user.balance - amount });
-    return true;
-  }, [user, card, beneficiaries, addTransaction, updateUser]);
+    try {
+      // Deduct from balance
+      const newBalance = user.balance - amount;
+      await updateUser({ balance: newBalance });
+
+      // Create transaction
+      const newTxn: Transaction = {
+        id: `txn-${Date.now()}`,
+        userId: user.id,
+        type: "debit",
+        amount,
+        category: "Transfer",
+        description: note,
+        merchant: beneficiary.name,
+        date: new Date().toISOString(),
+        balance: newBalance,
+      };
+
+      await saveTransaction(newTxn);
+
+      // Reload data
+      await refreshData();
+      return true;
+    } catch (error) {
+      console.error("Send money error:", error);
+      return false;
+    }
+  }, [user, beneficiaries, updateUser, refreshData]);
 
   const unreadCount = useMemo(
     () => notifications.filter((n) => !n.isRead).length,
@@ -138,7 +174,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
       markNotificationRead,
       sendMoney,
     }),
-    [transactions, card, beneficiaries, notifications, unreadCount, isLoading, refreshData, toggleCardFreeze, updateSpendingLimit, toggleCardControl, addTransaction, markNotificationRead, sendMoney]
+    [
+      transactions,
+      card,
+      beneficiaries,
+      notifications,
+      unreadCount,
+      isLoading,
+      refreshData,
+      toggleCardFreeze,
+      updateSpendingLimit,
+      toggleCardControl,
+      addTransaction,
+      markNotificationRead,
+      sendMoney,
+    ]
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

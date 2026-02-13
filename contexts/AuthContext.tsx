@@ -1,7 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
-import { User } from "@/lib/types";
-import { KEYS, getItem, setItem, removeItem } from "@/lib/storage";
-import { seedData, defaultUser } from "@/lib/seed-data";
+import {
+  User,
+  getCurrentUser,
+  setCurrentUser,
+  getUserByEmail,
+  saveUser,
+  ensureDemoUser,
+  updateUserBalance
+} from "@/services/database";
 
 interface AuthContextValue {
   user: User | null;
@@ -11,6 +17,7 @@ interface AuthContextValue {
   signup: (fullName: string, email: string, password: string, phone: string) => Promise<boolean>;
   logout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -25,11 +32,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function loadUser() {
     try {
-      await seedData();
-      const stored = await getItem<User>(KEYS.USER);
-      const loggedIn = await getItem<boolean>("@rivo_logged_in");
-      if (stored && loggedIn) {
-        setUser(stored);
+      // Ensure demo user exists (won't reset if already exists)
+      await ensureDemoUser();
+
+      // Load current logged-in user
+      const currentUser = await getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
       }
     } catch (e) {
       console.error("Failed to load user:", e);
@@ -38,55 +47,79 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function login(email: string, _password: string): Promise<boolean> {
+  async function login(email: string, password: string): Promise<boolean> {
     try {
-      const stored = await getItem<User>(KEYS.USER);
-      if (stored && stored.email === email) {
-        setUser(stored);
-        await setItem("@rivo_logged_in", true);
+      const dbUser = await getUserByEmail(email);
+
+      if (dbUser && dbUser.password === password) {
+        // Set as current user in database
+        await setCurrentUser(dbUser);
+        setUser(dbUser);
         return true;
       }
-      if (email === defaultUser.email) {
-        setUser(defaultUser);
-        await setItem(KEYS.USER, defaultUser);
-        await setItem("@rivo_logged_in", true);
-        return true;
-      }
+
       return false;
-    } catch {
+    } catch (error) {
+      console.error("Login error:", error);
       return false;
     }
   }
 
-  async function signup(fullName: string, email: string, _password: string, phone: string): Promise<boolean> {
+  async function signup(fullName: string, email: string, password: string, phone: string): Promise<boolean> {
     try {
+      // Check if user already exists
+      const existing = await getUserByEmail(email);
+      if (existing) {
+        return false; // User already exists
+      }
+
       const newUser: User = {
-        id: Date.now().toString(),
+        id: `user-${Date.now()}`,
         fullName,
         email,
         phone,
-        balance: 1000,
-        rewardPoints: 100,
+        password,
+        profilePhoto: null,
+        balance: 1000, // Starting balance
+        creditScore: 650, // Default credit score
+        kycStatus: 'pending',
+        biometricEnabled: false,
+        createdAt: new Date().toISOString(),
       };
-      await setItem(KEYS.USER, newUser);
-      await setItem("@rivo_logged_in", true);
+
+      await saveUser(newUser);
+      await setCurrentUser(newUser);
       setUser(newUser);
       return true;
-    } catch {
+    } catch (error) {
+      console.error("Signup error:", error);
       return false;
     }
   }
 
   async function logout(): Promise<void> {
-    await removeItem("@rivo_logged_in");
+    await setCurrentUser(null);
     setUser(null);
   }
 
   async function updateUser(updates: Partial<User>): Promise<void> {
     if (!user) return;
+
     const updated = { ...user, ...updates };
-    await setItem(KEYS.USER, updated);
+    await saveUser(updated);
+    await setCurrentUser(updated);
     setUser(updated);
+  }
+
+  async function refreshUser(): Promise<void> {
+    if (!user) return;
+
+    // Reload user from database to get latest data
+    const fresh = await getUserByEmail(user.email);
+    if (fresh) {
+      await setCurrentUser(fresh);
+      setUser(fresh);
+    }
   }
 
   const value = useMemo(
@@ -98,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signup,
       logout,
       updateUser,
+      refreshUser,
     }),
     [user, isLoading]
   );
